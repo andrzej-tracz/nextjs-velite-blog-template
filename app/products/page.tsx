@@ -1,39 +1,19 @@
 import { CategoryFilter } from "@/components/products/category-filter";
-import { ProductCard } from "@/components/products/product-card";
+import { ProductInfiniteList } from "@/components/products/product-infinite-list";
 import { SiteHeader } from "@/components/site-header";
 import {
   buildCategoryTreeWithCounts,
   filterProductsByCategories,
   parseCategoriesParam,
 } from "@/lib/products/category-utils";
+import { PRODUCTS_CHUNK_SIZE } from "@/lib/products/constants";
 import { loadProducts } from "@/lib/products/load-products";
+import { paginateProducts } from "@/lib/products/paginate-products";
 import { Suspense } from "react";
 
 type ProductsPageProps = {
   searchParams: Promise<{ categories?: string | string[] }>;
 };
-
-function ProductGrid({
-  products,
-}: {
-  products: ReturnType<typeof loadProducts>;
-}) {
-  if (products.length === 0) {
-    return (
-      <p className="py-12 text-center text-emerald-900/70">
-        No products match the selected categories.
-      </p>
-    );
-  }
-
-  return (
-    <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
-      {products.map((product) => (
-        <ProductCard key={product.id} product={product} />
-      ))}
-    </div>
-  );
-}
 
 export default async function ProductsPage({ searchParams }: ProductsPageProps) {
   const params = await searchParams;
@@ -43,6 +23,11 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
   const filteredProducts = filterProductsByCategories(
     allProducts,
     selectedPaths
+  );
+  const initialPage = paginateProducts(
+    filteredProducts,
+    0,
+    PRODUCTS_CHUNK_SIZE
   );
 
   return (
@@ -64,7 +49,12 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
               {filteredProducts.length} product
               {filteredProducts.length === 1 ? "" : "s"}
             </p>
-            <ProductGrid products={filteredProducts} />
+            <ProductInfiniteList
+              key={selectedPaths.join(",")}
+              initialProducts={initialPage.products}
+              totalCount={initialPage.total}
+              selectedCategories={selectedPaths}
+            />
           </div>
         </div>
       </div>
